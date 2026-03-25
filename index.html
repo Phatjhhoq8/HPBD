@@ -1,0 +1,1633 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>HPBD</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Manrope:wght@400;600&display=swap');
+
+        :root {
+            --bg: #080404;
+            --gold: #e0b85f;
+            --gold2: #ffe7b0;
+            --red: #7f1018;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Manrope', sans-serif;
+            background:
+                radial-gradient(circle at 50% 18%, rgba(255, 214, 160, 0.18), transparent 24%),
+                radial-gradient(circle at 15% 12%, rgba(142, 22, 48, 0.34), transparent 36%),
+                radial-gradient(circle at 82% 20%, rgba(255, 180, 126, 0.14), transparent 28%),
+                radial-gradient(circle at 50% 78%, rgba(255, 106, 142, 0.1), transparent 30%),
+                linear-gradient(180deg, #1b0811 0%, #0f060b 42%, #050204 100%),
+                var(--bg);
+            box-shadow: inset 0 0 180px rgba(0, 0, 0, .45);
+        }
+
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(circle at 50% 30%, rgba(255, 227, 181, .06), transparent 26%),
+                radial-gradient(circle at 50% 110%, rgba(122, 8, 32, .2), transparent 44%);
+        }
+
+        #loader {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #050202;
+            transition: opacity .8s;
+        }
+
+        .spinner {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: 1px solid rgba(224, 184, 95, .18);
+            border-top-color: var(--gold);
+            animation: spin 1s linear infinite;
+        }
+
+        .loader-text {
+            margin-top: 18px;
+            color: var(--gold);
+            font-size: 12px;
+            letter-spacing: .35em;
+            text-transform: uppercase;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #ui-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 28px 18px;
+        }
+
+        h1 {
+            margin: 0;
+            font: 700 clamp(34px, 6vw, 68px)/1 'Cinzel', serif;
+            letter-spacing: .24em;
+            text-transform: uppercase;
+            background: linear-gradient(to bottom, #fff7d4, #f3ca6e 65%, #cc8f2d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 22px rgba(255, 220, 145, .2);
+        }
+
+        .subtitle {
+            margin-top: 10px;
+            color: rgba(255, 236, 194, .72);
+            font-size: 11px;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            text-align: center;
+            max-width: 720px;
+        }
+
+        .upload-wrapper {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
+            transition: .35s;
+        }
+
+        .upload-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 168px;
+            padding: 12px 24px;
+            border: 1px solid rgba(224, 184, 95, .45);
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(65, 8, 15, .84), rgba(14, 8, 10, .78));
+            color: var(--gold2);
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: .22em;
+            font-size: 11px;
+            font-family: inherit;
+            backdrop-filter: blur(10px);
+            appearance: none;
+        }
+
+        .hint-text {
+            color: rgba(255, 228, 175, .62);
+            font-size: 10px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .ui-hidden {
+            opacity: 0;
+            transform: translateY(-8px);
+            pointer-events: none !important;
+        }
+
+        #file-input { display: none; }
+
+        #webcam-wrapper {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            z-index: 12;
+            width: min(26vw, 250px);
+            aspect-ratio: 4 / 3;
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid rgba(224, 184, 95, .38);
+            background: linear-gradient(180deg, rgba(31, 7, 11, .82), rgba(8, 4, 5, .92));
+            box-shadow: 0 18px 60px rgba(0, 0, 0, .45);
+        }
+
+        #webcam-preview {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .camera-label {
+            position: absolute;
+            left: 12px;
+            top: 10px;
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, .34);
+            color: rgba(255, 230, 170, .92);
+            font-size: 10px;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 720px) {
+            #webcam-wrapper {
+                width: min(40vw, 200px);
+                right: 12px;
+                bottom: 12px;
+                border-radius: 14px;
+            }
+
+            .subtitle {
+                max-width: 340px;
+                line-height: 1.5;
+            }
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+                "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="loader">
+        <div class="spinner"></div>
+        <div class="loader-text">Loading Gift Magic</div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <div class="upload-wrapper">
+            <div class="control-row">
+                <label class="upload-btn">
+                    Them anh vao hop
+                    <input type="file" id="file-input" multiple accept="image/*">
+                </label>
+            </div>
+            <div class="hint-text">Nhấn H để ẩn nút thêm ảnh</div>
+        </div>
+    </div>
+
+    <div id="webcam-wrapper">
+        <div class="camera-label">Hand Camera</div>
+        <video id="webcam" autoplay playsinline style="display:none"></video>
+        <canvas id="webcam-preview"></canvas>
+    </div>
+
+    <audio id="bg-music" loop preload="auto"></audio>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+        import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
+
+        const CFG = {
+            bg: 0x080404,
+            gold: 0xe0b85f,
+            gold2: 0xffe8ad,
+            red: 0x7f1018,
+            redDark: 0x32060b,
+            box: { w: 15, h: 8, d: 15, lid: 1.6, ribbon: 1.45 },
+            count: 1500,
+            dust: 4300,
+            autoRotateSpeed: 0.035
+        };
+
+        const CAM = {
+            introPos: new THREE.Vector3(2.8, 7.8, 34.5),
+            introLook: new THREE.Vector3(0, 3.8, 0),
+            textPos: new THREE.Vector3(0.45, 9.4, 30.5),
+            textLook: new THREE.Vector3(0, 8.7, 0),
+            finalePos: new THREE.Vector3(-1.15, 8.8, 27.8),
+            finaleLook: new THREE.Vector3(0, 7.4, 0),
+            resolvePos: new THREE.Vector3(1.1, 8.25, 34.4),
+            resolveLook: new THREE.Vector3(0, 6.8, 0),
+            focusOffset: new THREE.Vector3(0, -0.15, -2.2)
+        };
+
+        const DEFAULT_IMAGE_PATHS = [
+            'imgs/z7343414814340_d76f4df60021636c1c14c032f7e4c86c.jpg',
+            'imgs/z7350374418053_f4217ab891e5c2e3fe6e50564bd4343c.jpg',
+            'imgs/z7372396755309_1dba2714bd0e7e1b722264ad0d6025e5.jpg',
+            'imgs/z7414944117855_33c1ef38ab9ac12af67a7bb9f972c79c.jpg',
+            'imgs/z7443636095070_52958928f96c310c47ffef48d93b5639.jpg',
+            'imgs/z7446935638136_15654d6a0d9ff298e6da0ea1e206ab5e.jpg',
+            'imgs/z7458460381083_97eb9f789e403fe7ee0e9d43f80b7fad.jpg',
+            'imgs/z7474620827742_224c5f5180d68d92fc967fba9c059280.jpg',
+            'imgs/z7474620837879_04654f61e97bfb708fca3b9f8b5af6dc.jpg',
+            'imgs/z7474620873341_4a07891252d3ccedad8af8883d70b5d2.jpg',
+            'imgs/z7488417834068_cf1e4c0bfb951818af6071f659428da0.jpg',
+            'imgs/z7499065381964_5575b78f5c7e82ada8f69fc0a7e21498.jpg',
+            'imgs/z7507100840510_3f0123b1eee54b37dc0a87743e34673f.jpg',
+            'imgs/z7535533289469_e063ac68c50182719f88dba08f2f16a5.jpg',
+            'imgs/z7563533071472_af6d979cf294b3d757467de0ecef2c8b.jpg',
+            'imgs/z7598617129212_88ebd6fd40ed74cb7b3351623f36c2fb.jpg'
+        ];
+
+        const DEFAULT_MUSIC_PATH = 'Happy Birthday to You (Always 14) - AMEE x Hoàng Dũng x Obito x Hứa Kim Tuyền ｜ OFFICIAL LYRIC VIDEO [h53q6iIORhw].mp3';
+
+        const BONES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+        const S = { target: 0, open: 0, lid: 0, ribbon: 0, burst: 0, celebrate: 0, happyMix: 0, nameMix: 0, closeLoveMix: 0, closeLoveTimer: 0, hasOpenedOnce: false, disintegrateArmed: false, textMix: 0, floatMix: 0, boxHide: 0, focus: 0, disintegrateTimer: 0, disintegrateMix: 0, disintegrateStarted: false, disintegrated: false, act1Mix: 0, act2Mix: 0, act3Mix: 0, romanceMix: 0, hand: { det: false, open: 0, x: 0, y: 0, palm: 0, pinch: 0, changeLock: 0 }, rot: { x: -0.02, y: 0 } };
+
+        let scene, camera, renderer, composer, clock = new THREE.Clock();
+        let main, particles = [], photoGroup = new THREE.Group(), focusLayer = new THREE.Group(), photoItems = [], textTargets = [], nameTargets = [], closeTargets = [], particleOrdinal = 0;
+        let giftFragments = [];
+        let glow, giftShell, base, lidPivot, lid, rv, rh, bow, sparkles, skyGroup, bloomPass;
+        let bowLeft, bowRight, tailLeft, tailRight;
+        let landmarker, video, camCanvas, camCtx, lastVideo = -1, focusPhoto = null;
+        let bgMusic, musicUnlocked = false, musicStarted = false, userUploadedPhotos = false, photoLoadVersion = 0;
+        let camLook = new THREE.Vector3(0, 7, 0);
+        class P {
+            constructor(mesh, type, dust = false, index = 0) {
+                this.mesh = mesh;
+                this.type = type;
+                this.dust = dust;
+                this.nearStar = !!mesh.userData.isNearStar;
+                this.twinkleSpeed = mesh.userData.twinkleSpeed || (0.8 + Math.random() * 2.2);
+                this.twinklePhase = mesh.userData.twinklePhase || (Math.random() * Math.PI * 2);
+                this.twinkleStrength = mesh.userData.twinkleStrength || (this.dust ? 0.22 : 0.1);
+                this.base = mesh.scale.x;
+                this.packed = new THREE.Vector3();
+                this.launch = new THREE.Vector3();
+                this.burst = new THREE.Vector3();
+                this.textTarget = (textTargets[index % textTargets.length] || new THREE.Vector3(0, 10, 0)).clone();
+                this.nameTarget = (nameTargets[index % nameTargets.length] || new THREE.Vector3(0, 7.2, 0)).clone();
+                this.closeTarget = (closeTargets[index % closeTargets.length] || new THREE.Vector3(0, 6.5, 0)).clone();
+                this.orbitRadius = 13.5 + Math.random() * 1.2;
+                this.orbitPhase = index * 0.72;
+                this.off = Math.random() * 9;
+                this.spin = new THREE.Vector3((Math.random() - .5) * 1.4, (Math.random() - .5) * 1.7, (Math.random() - .5) * 1.3);
+                this.baseColor = mesh.userData.baseColor || (mesh.material?.color ? mesh.material.color.getHex() : null);
+                this.seed();
+            }
+
+            seed() {
+                const b = CFG.box;
+                this.packed.set((Math.random() - .5) * b.w * .35, -b.h * .18 + Math.random() * b.h * .45, (Math.random() - .5) * b.d * .35);
+                const a = Math.random() * Math.PI * 2;
+                this.launch.set((Math.random() - .5) * 16, 11 + Math.random() * 9, (Math.random() - .5) * 9);
+                if (this.dust) {
+                    const r = 10 + Math.random() * 22;
+                    const h = -8 + Math.random() * 22;
+                    this.burst.set(Math.cos(a) * r, h, Math.sin(a) * r);
+                    this.textTarget.set((Math.random() - .5) * 26, 8 + (Math.random() - .5) * 10, (Math.random() - .5) * 4);
+                    return;
+                }
+                if (this.type === 'PHOTO') {
+                    const r = 13.5 + Math.random() * 1.2;
+                    this.launch.set((Math.random() - .5) * 18, 13 + Math.random() * 8, (Math.random() - .5) * 9);
+                    this.burst.set(Math.cos(a) * r, 8.8 + (Math.random() - .5) * 1.1, Math.sin(a) * r * .78);
+                    return;
+                }
+                const r = 3 + Math.random() * 8;
+                this.burst.set(Math.cos(a) * r, 6 + Math.random() * 14, Math.sin(a) * r * .7);
+            }
+
+            update(dt, open, happyMix, nameMix, textMix, floatMix) {
+                const burst = THREE.MathUtils.smoothstep(open, .12, .92);
+                const time = clock.elapsedTime + this.off;
+                const target = this.packed.clone().lerp(this.launch, burst);
+                const textBlend = this.dust ? 0 : (this.type === 'PHOTO' ? 0 : happyMix);
+                target.lerp(this.textTarget, textBlend);
+                if (!this.dust && this.type !== 'PHOTO' && happyMix > .08) {
+                    const happyLock = THREE.MathUtils.smoothstep(happyMix, .08, .3);
+                    target.x = THREE.MathUtils.lerp(target.x, this.textTarget.x, happyLock * .9992);
+                    target.y = THREE.MathUtils.lerp(target.y, this.textTarget.y, happyLock * .9992);
+                    target.z = THREE.MathUtils.lerp(target.z, this.textTarget.z, happyLock * .9999);
+                }
+                if (this.dust) {
+                    target.lerp(this.nameTarget, nameMix * .998);
+                    target.lerp(this.closeTarget, S.closeLoveMix * .998);
+                }
+                if (this.type === 'PHOTO') {
+                    const orbitMix = THREE.MathUtils.smoothstep(Math.max(textMix, floatMix), .04, .22);
+                    const orbitTarget = new THREE.Vector3(
+                        Math.cos(time * .26 + this.orbitPhase) * this.orbitRadius,
+                        8.9 + Math.sin(time * .52 + this.orbitPhase) * .42,
+                        Math.sin(time * .26 + this.orbitPhase) * this.orbitRadius * .78
+                    );
+                    target.lerp(orbitTarget, orbitMix);
+                } else if (!this.dust && nameMix > .08) {
+                    const nameOrbit = new THREE.Vector3(
+                        Math.cos(time * .34 + this.orbitPhase) * (10.8 + this.orbitRadius * .12),
+                        3.45 + Math.sin(time * .78 + this.orbitPhase) * .42,
+                        Math.sin(time * .34 + this.orbitPhase) * (3.8 + this.orbitRadius * .06)
+                    );
+                    target.lerp(nameOrbit, THREE.MathUtils.smoothstep(nameMix, .08, .28));
+                } else if (!this.dust && S.closeLoveMix > .08 && this.type !== 'PHOTO') {
+                    const closeOrbit = new THREE.Vector3(
+                        Math.cos(time * .28 + this.orbitPhase) * (11.5 + this.orbitRadius * .2),
+                        2.8 + Math.sin(time * .62 + this.orbitPhase) * .9,
+                        Math.sin(time * .28 + this.orbitPhase) * (7.4 + this.orbitRadius * .1)
+                    );
+                    target.lerp(closeOrbit, THREE.MathUtils.smoothstep(S.closeLoveMix, .08, .28));
+                } else {
+                    target.lerp(this.burst, this.dust ? Math.max(burst * 0.82, floatMix) : floatMix);
+                }
+                if (textMix > .15 && floatMix < .2 && this.type !== 'PHOTO') {
+                    const activeZ = nameMix > .1 ? this.nameTarget.z : this.textTarget.z;
+                    target.z = THREE.MathUtils.lerp(target.z, activeZ, this.dust ? .9994 : (happyMix > .08 ? .9998 : .9986));
+                }
+
+                if (this.dust) {
+                    if (S.closeLoveMix > .08) {
+                        const lock = THREE.MathUtils.smoothstep(S.closeLoveMix, .04, .1);
+                        target.x = THREE.MathUtils.lerp(target.x, this.closeTarget.x, lock * .9996);
+                        target.y = THREE.MathUtils.lerp(target.y, this.closeTarget.y, lock * .9996);
+                        target.z = THREE.MathUtils.lerp(target.z, this.closeTarget.z, lock * .9998);
+                    } else if (nameMix > .08) {
+                        const lock = THREE.MathUtils.smoothstep(nameMix, .04, .1);
+                        target.x = THREE.MathUtils.lerp(target.x, this.nameTarget.x, lock * .9992);
+                        target.y = THREE.MathUtils.lerp(target.y, this.nameTarget.y, lock * .9992);
+                        target.z = THREE.MathUtils.lerp(target.z, this.nameTarget.z, lock * .9996);
+                    } else {
+                        const ambientMix = Math.max(burst * 0.82, floatMix);
+                        const speed = this.nearStar ? 0.28 : 1.0;
+                        const swirl = (this.nearStar ? 0.0015 : 0.004) + ambientMix * (this.nearStar ? 0.05 : 0.16);
+                        target.x += Math.cos(time * 0.8 * speed + this.off) * swirl;
+                        target.y += Math.sin(time * 1.1 * speed + this.off) * ((this.nearStar ? 0.0015 : 0.004) + ambientMix * (this.nearStar ? 0.03 : 0.08));
+                        target.z += Math.sin(time * 0.7 * speed + this.off) * swirl;
+                    }
+                } else if (burst > .02) {
+                    const amp = this.type === 'PHOTO' ? .52 : .18;
+                    const happyDriftDamp = this.type === 'PHOTO' ? 1 : (1 - THREE.MathUtils.smoothstep(happyMix, .08, .3) * .992);
+                    target.x += Math.cos(time * .6 + this.off) * amp * floatMix * happyDriftDamp;
+                    target.y += Math.sin(time * 1.15 + this.off) * (.2 + amp) * floatMix * happyDriftDamp;
+                    target.z += Math.sin(time * .7 + this.off) * amp * floatMix * happyDriftDamp;
+                    if (this.type !== 'PHOTO' && happyMix > .08) {
+                        const alive = 1 - THREE.MathUtils.smoothstep(happyMix, .08, .32) * .82;
+                        target.x += Math.cos(time * .95 + this.orbitPhase) * .018 * alive;
+                        target.y += Math.sin(time * 1.28 + this.orbitPhase) * .028 * alive;
+                    }
+                }
+
+                if (S.target === 0 && S.closeLoveTimer <= 0) {
+                    const closeMix = THREE.MathUtils.smoothstep(1 - open, .04, .98);
+                    const gatherMix = THREE.MathUtils.smoothstep(closeMix, .08, .72);
+                    const sealMix = THREE.MathUtils.smoothstep(closeMix, .93, .995);
+                    const swirlMix = 1 - sealMix;
+                    const layer = this.dust ? (this.nearStar ? 0 : 2) : (this.type === 'PHOTO' ? 1 : 1.5);
+                    const angle = time * (8.8 - layer * 1.2) + this.off * 7.5;
+                    const radius = (10.5 + layer * 2.8) * (1 - gatherMix) + 0.22 * (1 - sealMix);
+                    const vortexTarget = new THREE.Vector3(
+                        Math.cos(angle) * radius,
+                        this.packed.y + 6.2 * swirlMix + layer * 0.55 + Math.sin(angle * 1.5) * 0.14 * swirlMix,
+                        Math.sin(angle) * radius * (0.34 + layer * 0.05)
+                    );
+                    target.copy(vortexTarget.lerp(this.packed, sealMix));
+                }
+
+                const collapseBoost = S.target === 0 ? 0.92 : 1;
+                const moveRate = (this.dust ? (this.nearStar ? 0.55 : 1.5) : 2.4) * collapseBoost;
+                this.mesh.position.lerp(target, moveRate * dt * 4);
+                const spinRate = S.target === 0 ? (this.dust ? 3.2 : 2.6) : (this.dust && this.nearStar ? 0.18 : (.3 + burst * 1.3 + floatMix * .8));
+                this.mesh.rotation.x += this.spin.x * dt * spinRate;
+                this.mesh.rotation.y += this.spin.y * dt * spinRate;
+                this.mesh.rotation.z += this.spin.z * dt * spinRate;
+
+                let scale;
+                if (this.dust) {
+                    scale = this.base * (.05 + happyMix * 0.72 + nameMix * 2.25 + S.closeLoveMix * 3.8 + floatMix * .2 + .001 * Math.sin(time * 2.2));
+                } else if (this.type === 'PHOTO') {
+                    scale = this.base * (.58 + burst * .34 + Math.max(textMix, floatMix) * .78);
+                } else {
+                    const happyBuild = THREE.MathUtils.smoothstep(happyMix, .04, .22);
+                    const happyTight = 1 - THREE.MathUtils.smoothstep(happyMix, .08, .28) * .18;
+                    scale = this.base * (.1 + burst * .14 + happyBuild * .94 + nameMix * 1.2 + floatMix * .18) * happyTight;
+                }
+                let targetScale = scale;
+                if (S.target === 0 && S.closeLoveTimer <= 0) {
+                    const closeMix = THREE.MathUtils.smoothstep(1 - open, .04, .98);
+                    const sealMix = THREE.MathUtils.smoothstep(closeMix, .93, .995);
+                    targetScale *= 1 - sealMix * 0.55;
+                }
+                if (this.dust) {
+                    const twinkle = 0.84 + Math.max(0, Math.sin(time * this.twinkleSpeed + this.twinklePhase)) * this.twinkleStrength;
+                    targetScale *= twinkle;
+                    if (this.mesh.material) {
+                        if (S.closeLoveMix > .08) this.mesh.material.color.setHex(0xff2038);
+                        else if (this.baseColor) this.mesh.material.color.setHex(this.baseColor);
+                        this.mesh.material.opacity = THREE.MathUtils.clamp(
+                            (this.nearStar ? 0.12 : 0.05) + twinkle * (this.nearStar ? 0.4 : 0.16) + S.closeLoveMix * 0.28,
+                            0,
+                            1
+                        );
+                    }
+                }
+                this.mesh.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 8 * dt);
+
+                if (this.type === 'PHOTO') {
+                    if (focusPhoto === this.mesh && S.focus > .02) {
+                        if (this.mesh.parent !== focusLayer) focusLayer.attach(this.mesh);
+                        const focusTarget = new THREE.Vector3(0, 0, 0);
+                        this.mesh.position.copy(focusTarget);
+                        const focusScale = this.base * (1.7 + S.focus * 1.25);
+                        this.mesh.scale.setScalar(focusScale);
+                        this.mesh.rotation.set(0, 0, 0);
+                        this.mesh.renderOrder = 999;
+                        this.mesh.traverse((child) => {
+                            if (child.material) {
+                                child.renderOrder = 999;
+                                child.material.depthTest = false;
+                                child.material.depthWrite = false;
+                            }
+                        });
+                        if (this.mesh.userData.halo?.material) {
+                            this.mesh.userData.halo.material.opacity = 0;
+                        }
+                        if (this.mesh.children[1]?.material) {
+                            this.mesh.children[1].material.emissiveIntensity = this.mesh.userData.baseFrameEmissive ?? 0;
+                            this.mesh.children[1].material.color.setHex(CFG.gold);
+                        }
+                    } else {
+                        if (this.mesh.parent === focusLayer) photoGroup.attach(this.mesh);
+                        this.mesh.renderOrder = 0;
+                        this.mesh.traverse((child) => {
+                            if (child.material) {
+                                child.renderOrder = 0;
+                                child.material.depthTest = true;
+                                child.material.depthWrite = true;
+                            }
+                        });
+                        const tilt = Math.sin(time * .8) * .03 * Math.max(textMix, floatMix);
+                        this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, tilt, dt * 3.5);
+                        this.mesh.rotation.z = THREE.MathUtils.lerp(this.mesh.rotation.z, -tilt * .6, dt * 3.5);
+                        if (this.mesh.userData.halo?.material) {
+                            this.mesh.userData.halo.material.opacity = THREE.MathUtils.lerp(this.mesh.userData.halo.material.opacity, 0, dt * 8);
+                        }
+                        if (this.mesh.children[1]?.material) {
+                            this.mesh.children[1].material.emissiveIntensity = THREE.MathUtils.lerp(this.mesh.children[1].material.emissiveIntensity, this.mesh.userData.baseFrameEmissive ?? 0, dt * 8);
+                            this.mesh.children[1].material.color.setHex(CFG.gold);
+                        }
+                        if (textMix > .08 || floatMix > .08) this.mesh.lookAt(camera.position);
+                    }
+                }
+            }
+        }
+
+        async function init() {
+            initThree();
+            env();
+            lights();
+            sky();
+            gift();
+            textTargets = generateTextTargets(Math.floor(CFG.count * 1.45));
+            nameTargets = generateNameTargets(CFG.count + 120);
+            closeTargets = generateCloseTargets(CFG.dust + 240);
+            createParticles();
+            createDust();
+            loadDefaultPhotos();
+            post();
+            events();
+            setupMusic();
+            await media();
+            const loader = document.getElementById('loader');
+            loader.style.opacity = 0;
+            setTimeout(() => loader.remove(), 800);
+            animate();
+        }
+
+        function initThree() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(CFG.bg);
+            scene.fog = new THREE.FogExp2(CFG.bg, .018);
+
+            camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, .1, 1000);
+            camera.position.copy(CAM.introPos);
+            camLook.copy(CAM.introLook);
+            camera.lookAt(camLook);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+            renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+            renderer.setSize(innerWidth, innerHeight);
+            renderer.toneMapping = THREE.ReinhardToneMapping;
+            renderer.toneMappingExposure = 1.9;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            main = new THREE.Group();
+            scene.add(main);
+            main.add(photoGroup);
+            focusLayer.position.set(0, -0.8, -12.5);
+            camera.add(focusLayer);
+            scene.add(camera);
+        }
+
+        function env() {
+            const pm = new THREE.PMREMGenerator(renderer);
+            scene.environment = pm.fromScene(new RoomEnvironment(), .03).texture;
+        }
+
+        function createBowWing(material, side = 1) {
+            const wing = new THREE.Group();
+            const wingShape = new THREE.Shape();
+            wingShape.moveTo(0.0, 0.0);
+            wingShape.bezierCurveTo(0.4, 0.44, 1.02, 0.7, 1.62, 0.5);
+            wingShape.bezierCurveTo(1.92, 0.34, 2.02, 0.08, 1.88, -0.14);
+            wingShape.bezierCurveTo(1.54, -0.48, 0.92, -0.66, 0.2, -0.38);
+            wingShape.bezierCurveTo(-0.08, -0.28, -0.15, -0.1, 0.0, 0.0);
+            const wingGeo = new THREE.ExtrudeGeometry(wingShape, {
+                depth: 0.18,
+                bevelEnabled: true,
+                bevelSegments: 4,
+                steps: 1,
+                bevelSize: 0.06,
+                bevelThickness: 0.045,
+                curveSegments: 20
+            });
+            wingGeo.center();
+            const wingMesh = new THREE.Mesh(wingGeo, material);
+            wingMesh.rotation.y = side < 0 ? Math.PI : 0;
+            wingMesh.scale.set(0.96, 1.02, 0.96);
+            wing.add(wingMesh);
+
+            const pinch = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.3, 4, 8), material);
+            pinch.rotation.z = Math.PI / 2;
+            pinch.position.set(side * -0.06, -0.01, 0.06);
+            pinch.scale.set(0.98, 0.74, 0.68);
+            wing.add(pinch);
+
+            const fold = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.72, 0.12), material);
+            fold.position.set(side * 0.34, -0.02, -0.04);
+            fold.rotation.set(0.14, 0.06 * side, side * -0.28);
+            wing.add(fold);
+            return wing;
+        }
+
+        function createBowTail(material, side = 1) {
+            const tail = new THREE.Group();
+            const tailShape = new THREE.Shape();
+            tailShape.moveTo(-0.24, 1.24);
+            tailShape.lineTo(0.24, 1.24);
+            tailShape.bezierCurveTo(0.34, 0.66, 0.32, 0.08, 0.13, -1.02);
+            tailShape.lineTo(0, -1.24);
+            tailShape.lineTo(-0.13, -1.02);
+            tailShape.bezierCurveTo(-0.32, 0.08, -0.34, 0.66, -0.24, 1.24);
+            const tailGeo = new THREE.ExtrudeGeometry(tailShape, {
+                depth: 0.14,
+                bevelEnabled: true,
+                bevelSegments: 3,
+                steps: 1,
+                bevelSize: 0.035,
+                bevelThickness: 0.03,
+                curveSegments: 16
+            });
+            tailGeo.center();
+            const tailMesh = new THREE.Mesh(tailGeo, material);
+            tailMesh.scale.set(0.88, 1.08, 0.95);
+            tail.add(tailMesh);
+
+            const crease = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.72, 0.1), material);
+            crease.position.set(side * 0.05, 0.62, 0.04);
+            crease.rotation.z = side * 0.08;
+            tail.add(crease);
+            return tail;
+        }
+
+        function generateTextTargets(count) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1900;
+            canvas.height = 760;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '700 360px Cinzel';
+            ctx.fillText('Happy', canvas.width / 2, 190);
+            ctx.font = '700 400px Cinzel';
+            ctx.fillText('Birthday', canvas.width / 2, 500);
+
+            const img = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            const points = [];
+            for (let y = 0; y < canvas.height; y += 1) {
+                for (let x = 0; x < canvas.width; x += 1) {
+                    const a = img[(y * canvas.width + x) * 4 + 3];
+                    if (a > 40) points.push(new THREE.Vector3((x - canvas.width / 2) * .0215, (canvas.height / 2 - y) * .0218 + 7.0, 0));
+                }
+            }
+            for (let i = points.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [points[i], points[j]] = [points[j], points[i]];
+            }
+            const out = [];
+            for (let i = 0; i < count; i++) {
+                const basePoint = points[i % points.length] || new THREE.Vector3(0, 10, 0);
+                out.push(basePoint.clone().add(new THREE.Vector3((Math.random() - .5) * .00003, (Math.random() - .5) * .00003, 0)));
+            }
+            return out;
+        }
+
+        function generateNameTargets(count) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 2200;
+            canvas.height = 500;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '700 220px Manrope';
+            ctx.fillText('Trần Kim Ngân', canvas.width / 2, 246);
+
+            const img = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            const points = [];
+            for (let y = 0; y < canvas.height; y += 1) {
+                for (let x = 0; x < canvas.width; x += 1) {
+                    const a = img[(y * canvas.width + x) * 4 + 3];
+                    if (a > 40) points.push(new THREE.Vector3((x - canvas.width / 2) * .0142, (canvas.height / 2 - y) * .0142 + 7.0, (Math.random() - .5) * .0012));
+                }
+            }
+            for (let i = points.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [points[i], points[j]] = [points[j], points[i]];
+            }
+            const out = [];
+            for (let i = 0; i < count; i++) {
+                const basePoint = points[i % points.length] || new THREE.Vector3(0, 7.2, 0);
+                out.push(basePoint.clone().add(new THREE.Vector3((Math.random() - .5) * .00008, (Math.random() - .5) * .00008, (Math.random() - .5) * .00005)));
+            }
+            return out;
+        }
+
+        function generateCloseTargets(count) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1700;
+            canvas.height = 420;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '700 248px Cinzel';
+            ctx.fillText('I Love U', canvas.width / 2, 214);
+
+            const img = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            const points = [];
+            for (let y = 0; y < canvas.height; y += 2) {
+                for (let x = 0; x < canvas.width; x += 2) {
+                    const a = img[(y * canvas.width + x) * 4 + 3];
+                    if (a > 40) points.push(new THREE.Vector3((x - canvas.width / 2) * .0185, (canvas.height / 2 - y) * .0185 + 6.95, 0));
+                }
+            }
+            for (let i = points.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [points[i], points[j]] = [points[j], points[i]];
+            }
+            const out = [];
+            for (let i = 0; i < count; i++) {
+                const basePoint = points[i % points.length] || new THREE.Vector3(0, 6.8, 0);
+                out.push(basePoint.clone().add(new THREE.Vector3((Math.random() - .5) * .00003, (Math.random() - .5) * .00003, 0)));
+            }
+            return out;
+        }
+
+        function chooseFocusPhoto() {
+            if (!photoItems.length) return null;
+            let best = photoItems[0];
+            let bestScore = Infinity;
+            for (const group of photoItems) {
+                const score = Math.abs(group.position.x) + Math.abs(group.position.y - 8.5) * .6 + Math.abs(group.position.z);
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = group;
+                }
+            }
+            return best;
+        }
+        function cycleFocusPhoto() {
+            if (!photoItems.length) return null;
+            if (!focusPhoto) return chooseFocusPhoto();
+            const idx = photoItems.indexOf(focusPhoto);
+            return photoItems[(idx + 1) % photoItems.length] || focusPhoto;
+        }
+
+
+        function lights() {
+            scene.add(new THREE.AmbientLight(0xffffff, .8));
+            const key = new THREE.SpotLight(0xffd88a, 1000, 120, .52, .5, 1.2);
+            key.position.set(26, 34, 26);
+            scene.add(key);
+            const rim = new THREE.SpotLight(0xb33a30, 450, 90, .48, .5, 1.6);
+            rim.position.set(-24, 18, -22);
+            scene.add(rim);
+            const fill = new THREE.DirectionalLight(0xffe9c6, 1);
+            fill.position.set(0, 16, 20);
+            scene.add(fill);
+            glow = new THREE.PointLight(0xffbb55, .2, 40, 2);
+            glow.position.set(0, 2.8, 0);
+            main.add(glow);
+        }
+
+        function sky() {
+            skyGroup = new THREE.Group();
+            scene.add(skyGroup);
+
+            const veilGeo = new THREE.PlaneGeometry(20, 20);
+            const veilPalette = [0x7f1018, 0xffb980, 0xffcad6];
+            for (let i = 0; i < 16; i++) {
+                const veil = new THREE.Mesh(veilGeo, new THREE.MeshBasicMaterial({
+                    color: veilPalette[i % veilPalette.length],
+                    transparent: true,
+                    opacity: 0.045,
+                    depthWrite: false,
+                    blending: THREE.AdditiveBlending
+                }));
+                veil.position.set((Math.random() - .5) * 78, 8 + Math.random() * 34, -52 - Math.random() * 46);
+                veil.rotation.z = Math.random() * Math.PI;
+                const scale = 1.8 + Math.random() * 3.4;
+                veil.scale.set(scale, scale * (.55 + Math.random() * .4), 1);
+                veil.userData = {
+                    type: 'veil',
+                    off: Math.random() * Math.PI * 2,
+                    drift: 0.08 + Math.random() * 0.12,
+                    amp: 1.4 + Math.random() * 1.8,
+                    baseOpacity: 0.03 + Math.random() * 0.03
+                };
+                skyGroup.add(veil);
+            }
+
+            const starGeo = new THREE.OctahedronGeometry(.12, 0);
+            const starPalette = [0xfff3d2, 0xffd2d9, 0xfbe7a1, 0xffc88c];
+            for (let i = 0; i < 160; i++) {
+                const star = new THREE.Mesh(starGeo, new THREE.MeshBasicMaterial({
+                    color: starPalette[i % starPalette.length],
+                    transparent: true,
+                    opacity: 0.18 + Math.random() * 0.34,
+                    depthWrite: false
+                }));
+                const scale = 0.6 + Math.random() * 2.2;
+                star.scale.setScalar(scale);
+                star.position.set((Math.random() - .5) * 92, -6 + Math.random() * 48, -35 - Math.random() * 66);
+                star.userData = {
+                    type: 'star',
+                    off: Math.random() * Math.PI * 2,
+                    speed: 0.18 + Math.random() * 0.35,
+                    baseOpacity: star.material.opacity,
+                    drift: .2 + Math.random() * .3,
+                    baseScale: scale,
+                    shimmerSpeed: 0.7 + Math.random() * 1.4,
+                    shimmerPhase: Math.random() * Math.PI * 2,
+                    flickerSpeed: 1.8 + Math.random() * 2.6,
+                    flickerPhase: Math.random() * Math.PI * 2,
+                    flashChance: Math.random() < 0.14 ? 1 : 0,
+                    flashSpeed: 3.8 + Math.random() * 2.4,
+                    flashPhase: Math.random() * Math.PI * 2,
+                    glowBias: 0.9 + Math.random() * 0.18
+                };
+                skyGroup.add(star);
+            }
+        }
+
+        function gift() {
+            const b = CFG.box;
+            giftShell = new THREE.Group();
+            main.add(giftShell);
+            base = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), new THREE.MeshPhysicalMaterial({ color: CFG.red, metalness: .18, roughness: .45, clearcoat: .45, emissive: CFG.redDark, emissiveIntensity: .28 }));
+            giftShell.add(base);
+            base.add(new THREE.Mesh(new THREE.BoxGeometry(b.w + .28, b.h + .28, b.d + .28), new THREE.MeshBasicMaterial({ color: CFG.gold, transparent: true, opacity: .1 })));
+
+            lidPivot = new THREE.Group();
+            lidPivot.position.set(0, b.h / 2, -b.d / 2);
+            giftShell.add(lidPivot);
+            lid = new THREE.Mesh(new THREE.BoxGeometry(b.w + .9, b.lid, b.d + .9), new THREE.MeshPhysicalMaterial({ color: 0x8b111a, metalness: .22, roughness: .34, clearcoat: .55, emissive: 0x2d0409, emissiveIntensity: .3 }));
+            lid.position.set(0, b.lid / 2, b.d / 2);
+            lidPivot.add(lid);
+
+            const ribbonMat = new THREE.MeshPhysicalMaterial({ color: CFG.gold, metalness: .85, roughness: .24, emissive: 0x5b3f10, emissiveIntensity: .45 });
+            const bowMat = new THREE.MeshPhysicalMaterial({ color: CFG.gold2, metalness: .22, roughness: .34, clearcoat: 1, clearcoatRoughness: .18, emissive: 0x6a4710, emissiveIntensity: .28 });
+            rv = new THREE.Mesh(new THREE.BoxGeometry(b.ribbon, b.h + b.lid + .4, b.d + 1.2), ribbonMat);
+            rv.position.set(0, .7, 0);
+            giftShell.add(rv);
+            rh = new THREE.Mesh(new THREE.BoxGeometry(b.w + 1.2, b.h + b.lid + .4, b.ribbon), ribbonMat);
+            rh.position.set(0, .7, 0);
+            giftShell.add(rh);
+
+            bow = new THREE.Group();
+            bow.position.set(0, b.h / 2 + b.lid + .8, 0);
+            giftShell.add(bow);
+            const knot = new THREE.Mesh(new THREE.CapsuleGeometry(.42, .68, 6, 10), bowMat);
+            knot.rotation.z = Math.PI / 2;
+            knot.scale.set(0.92, 0.82, 0.72);
+            bow.add(knot);
+
+            bowLeft = createBowWing(bowMat, -1);
+            bowRight = createBowWing(bowMat, 1);
+            tailLeft = createBowTail(bowMat, -1);
+            tailRight = createBowTail(bowMat, 1);
+
+            bowLeft.rotation.set(.16, .26, -.22);
+            bowLeft.position.set(-1.02, .04, .14);
+            bowRight.rotation.set(.15, -.23, .2);
+            bowRight.position.set(1.0, .08, .1);
+            tailLeft.position.set(-.42, -1.34, .1);
+            tailLeft.rotation.set(.04, .08, .16);
+            tailRight.position.set(.38, -1.28, .06);
+            tailRight.rotation.set(-.03, -.06, -.12);
+            bow.add(bowLeft, bowRight, tailLeft, tailRight);
+
+            sparkles = new THREE.Group();
+            main.add(sparkles);
+            for (let i = 0; i < 84; i++) {
+                const s = new THREE.Mesh(new THREE.OctahedronGeometry(.12 + Math.random() * .18, 0), new THREE.MeshBasicMaterial({ color: CFG.gold2, transparent: true, opacity: .78 }));
+                s.userData = {
+                    a: Math.random() * Math.PI * 2,
+                    r: 4 + Math.random() * 9,
+                    h: 4 + Math.random() * 9,
+                    v: .45 + Math.random() * .9,
+                    closeR: 1.2 + Math.random() * 1.9,
+                    closeY: 0.2 + Math.random() * 1.4,
+                    blink: 2.2 + Math.random() * 3.6,
+                    blinkPhase: Math.random() * Math.PI * 2,
+                    twinkleBase: 0.52 + Math.random() * 0.28,
+                    twinkleAmp: 0.24 + Math.random() * 0.32,
+                    sizePulse: 0.18 + Math.random() * 0.26,
+                    shimmer: 0.45 + Math.random() * 0.5,
+                    shimmerPhase: Math.random() * Math.PI * 2,
+                    flicker: 1.6 + Math.random() * 2.2,
+                    flickerPhase: Math.random() * Math.PI * 2,
+                    flashChance: Math.random() < 0.12 ? 1 : 0,
+                    flashSpeed: 4.2 + Math.random() * 2.6,
+                    flashPhase: Math.random() * Math.PI * 2,
+                    glowBias: 0.92 + Math.random() * 0.18
+                };
+                sparkles.add(s);
+            }
+
+        }
+
+        function sampleGiftPoint(object, size) {
+            const local = new THREE.Vector3(
+                (Math.random() - .5) * size.x,
+                (Math.random() - .5) * size.y,
+                (Math.random() - .5) * size.z
+            );
+            object.updateWorldMatrix(true, false);
+            return local.applyMatrix4(object.matrixWorld);
+        }
+
+        function clearGiftFragments() {
+            giftFragments.forEach(({ mesh }) => {
+                mesh.geometry.dispose();
+                mesh.material.dispose();
+                scene.remove(mesh);
+            });
+            giftFragments = [];
+        }
+
+        function spawnGiftFragments() {
+            clearGiftFragments();
+            const parts = [
+                { object: base, size: new THREE.Vector3(CFG.box.w, CFG.box.h, CFG.box.d), count: 104, color: CFG.red, lift: .45 },
+                { object: lid, size: new THREE.Vector3(CFG.box.w + .9, CFG.box.lid, CFG.box.d + .9), count: 58, color: 0x8b111a, lift: .38 },
+                { object: rv, size: new THREE.Vector3(CFG.box.ribbon, CFG.box.h + CFG.box.lid + .4, CFG.box.d + 1.2), count: 48, color: CFG.gold, lift: .32 },
+                { object: rh, size: new THREE.Vector3(CFG.box.w + 1.2, CFG.box.h + CFG.box.lid + .4, CFG.box.ribbon), count: 48, color: CFG.gold, lift: .32 },
+                { object: bow, size: new THREE.Vector3(4.8, 3.6, 3.2), count: 76, color: CFG.gold2, lift: .52 }
+            ];
+
+            parts.forEach((part) => {
+                for (let i = 0; i < part.count; i++) {
+                    const size = .06 + Math.random() * .11;
+                    const geo = new THREE.CircleGeometry(size, 3);
+                    geo.rotateZ(Math.random() * Math.PI * 2);
+                    const mat = new THREE.MeshPhysicalMaterial({
+                        color: part.color,
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: .96,
+                        metalness: .16,
+                        roughness: .52,
+                        clearcoat: .18,
+                        emissive: part.color,
+                        emissiveIntensity: .08,
+                        depthWrite: false
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    const origin = sampleGiftPoint(part.object, part.size);
+                    const closeTarget = (closeTargets[Math.floor(Math.random() * closeTargets.length)] || new THREE.Vector3(0, 6.5, 0)).clone();
+                    const scatter = new THREE.Vector3(
+                        (Math.random() - .5) * (.82 + part.lift * .34),
+                        .16 + Math.random() * (.14 + part.lift * .22),
+                        (Math.random() - .5) * (.82 + part.lift * .34)
+                    );
+                    mesh.position.copy(origin);
+                    mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+                    scene.add(mesh);
+                    giftFragments.push({
+                        mesh,
+                        origin,
+                        scatter,
+                        closeTarget,
+                        orbitRadius: .45 + Math.random() * 1.2,
+                        orbitPhase: Math.random() * Math.PI * 2,
+                        layer: 1.1 + Math.random() * 1.2,
+                        off: Math.random() * 9,
+                        spin: new THREE.Vector3((Math.random() - .5) * 1.05, (Math.random() - .5) * 1.05, (Math.random() - .5) * 1.05),
+                        scale: .76 + Math.random() * .34,
+                        delay: (i % 4) * 0.015 + Math.random() * 0.01
+                    });
+                }
+            });
+        }
+
+        function updateGiftFragments(dt) {
+            if (!giftFragments.length) return;
+            giftFragments.forEach((fragment) => {
+                const life = THREE.MathUtils.clamp((S.disintegrateTimer - fragment.delay) / (.7 - fragment.delay), 0, 1);
+                const ease = 1 - ((1 - life) * (1 - life));
+                fragment.mesh.visible = life > 0 && life < 1;
+                if (!fragment.mesh.visible) return;
+                const time = clock.elapsedTime + fragment.off;
+                const shatterMix = THREE.MathUtils.smoothstep(life, 0, .22);
+                const settleMix = THREE.MathUtils.smoothstep(life, .1, .26);
+                const gatherMix = THREE.MathUtils.smoothstep(Math.max(S.closeLoveMix, life), .3, .62);
+                const orbitRadius = fragment.orbitRadius * (1 - gatherMix * .92);
+                const orbitTarget = new THREE.Vector3(
+                    fragment.closeTarget.x + Math.cos(time * (1.8 + fragment.layer * .24) + fragment.orbitPhase) * orbitRadius,
+                    fragment.closeTarget.y + Math.sin(time * (2.2 + fragment.layer * .3) + fragment.orbitPhase) * (0.16 + orbitRadius * .2),
+                    fragment.closeTarget.z + Math.sin(time * (1.8 + fragment.layer * .24) + fragment.orbitPhase) * orbitRadius * .62
+                );
+                const burstTarget = fragment.origin.clone().addScaledVector(fragment.scatter, shatterMix * (1.05 + settleMix * 0.18));
+                const flowTarget = burstTarget.clone().lerp(orbitTarget, gatherMix * .68);
+                flowTarget.lerp(fragment.closeTarget, gatherMix * .985);
+                fragment.mesh.position.lerp(flowTarget, Math.min(1, dt * (7.1 + settleMix * 3.8 + gatherMix * 7.4)));
+                fragment.mesh.rotation.x += fragment.spin.x * dt;
+                fragment.mesh.rotation.y += fragment.spin.y * dt;
+                fragment.mesh.rotation.z += fragment.spin.z * dt;
+                const scale = fragment.scale * (1 - ease * .66);
+                fragment.mesh.scale.setScalar(scale);
+                fragment.mesh.material.opacity = .96;
+            });
+        }
+
+        function createParticles() {
+            const sphereGeo = new THREE.SphereGeometry(.42, 20, 20);
+            const boxGeo = new THREE.BoxGeometry(.55, .55, .55);
+            const goldMat = new THREE.MeshStandardMaterial({ color: CFG.gold, metalness: .95, roughness: .12, emissive: 0x463008, emissiveIntensity: .34 });
+            const redMat = new THREE.MeshPhysicalMaterial({ color: 0xb31f28, metalness: .32, roughness: .25, clearcoat: 1, emissive: 0x32070d, emissiveIntensity: .3 });
+            const amberMat = new THREE.MeshStandardMaterial({ color: 0xffcf7a, metalness: .45, roughness: .18, emissive: 0x6c4205, emissiveIntensity: .58 });
+            for (let i = 0; i < CFG.count; i++) {
+                const roll = Math.random();
+                let mesh;
+                let type = 'BOX';
+                if (roll < .28) {
+                    mesh = new THREE.Mesh(boxGeo, redMat);
+                    type = 'RED';
+                } else if (roll < .52) {
+                    mesh = new THREE.Mesh(boxGeo, goldMat);
+                    type = 'GOLD';
+                } else {
+                    mesh = new THREE.Mesh(sphereGeo, amberMat);
+                    type = 'SPHERE';
+                }
+                mesh.scale.setScalar(.35 + Math.random() * .35);
+                main.add(mesh);
+                particles.push(new P(mesh, type, false, particleOrdinal++));
+            }
+        }
+
+        function createDust() {
+            const geo = new THREE.TetrahedronGeometry(.08, 0);
+            const palette = [0xe9f2ff, 0xc9dcff, 0x9fc4ff, 0x9ee7ff, 0xffefc0, 0xb7c8ff];
+            for (let i = 0; i < CFG.dust; i++) {
+                const isNearStar = i % 29 === 0;
+                const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+                    color: palette[i % palette.length],
+                    transparent: true,
+                    opacity: isNearStar ? (0.5 + Math.random() * 0.18) : (0.22 + Math.random() * 0.28)
+                }));
+                mesh.userData.isNearStar = isNearStar;
+                mesh.userData.twinkleSpeed = 1.2 + Math.random() * 4.5;
+                mesh.userData.twinklePhase = Math.random() * Math.PI * 2;
+                mesh.userData.twinkleStrength = isNearStar ? (0.3 + Math.random() * 0.14) : (0.1 + Math.random() * 0.08);
+                mesh.scale.setScalar(isNearStar ? (0.45 + Math.random() * 0.85) : (0.18 + Math.random() * 0.62));
+                main.add(mesh);
+                particles.push(new P(mesh, 'DUST', true, particleOrdinal++));
+            }
+        }
+
+        function addPhoto(texture) {
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, .08), new THREE.MeshStandardMaterial({ color: CFG.gold, metalness: 1, roughness: .14, emissive: 0x5b3c09, emissiveIntensity: 0 }));
+            const photoMat = new THREE.MeshBasicMaterial({ map: texture });
+            photoMat.toneMapped = false;
+            const photo = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), photoMat);
+            const halo = new THREE.Mesh(
+                new THREE.PlaneGeometry(2.4, 2.4),
+                new THREE.MeshBasicMaterial({ color: 0xffe7a8, transparent: true, opacity: 0, depthWrite: false })
+            );
+            const group = new THREE.Group();
+            halo.position.z = -0.08;
+            photo.position.z = .05;
+            group.add(halo, frame, photo);
+            group.scale.setScalar(.92);
+            group.userData.baseFrameEmissive = 0;
+            group.userData.halo = halo;
+            photoGroup.add(group);
+            photoItems.push(group);
+            particles.push(new P(group, 'PHOTO', false, particleOrdinal++));
+        }
+
+        function loadTexture(src) {
+            return new Promise((resolve, reject) => {
+                new THREE.TextureLoader().load(src, (texture) => {
+                    texture.colorSpace = THREE.SRGBColorSpace;
+                    resolve(texture);
+                }, undefined, reject);
+            });
+        }
+
+        function loadTextureFromFile(file) {
+            return new Promise((resolve, reject) => {
+                const objectUrl = URL.createObjectURL(file);
+                new THREE.TextureLoader().load(objectUrl, (texture) => {
+                    texture.colorSpace = THREE.SRGBColorSpace;
+                    texture.userData.objectUrl = objectUrl;
+                    resolve(texture);
+                }, undefined, (error) => {
+                    URL.revokeObjectURL(objectUrl);
+                    reject(error);
+                });
+            });
+        }
+
+        function disposePhotoGroup(group) {
+            group.traverse((child) => {
+                const materials = child.material ? (Array.isArray(child.material) ? child.material : [child.material]) : [];
+                materials.forEach((material) => {
+                    if (material.map) {
+                        const url = material.map.userData?.objectUrl;
+                        if (url) URL.revokeObjectURL(url);
+                        material.map.dispose();
+                    }
+                });
+                if (child.material) {
+                    materials.forEach((material) => material.dispose());
+                }
+                if (child.geometry) child.geometry.dispose();
+            });
+            if (group.parent) group.parent.remove(group);
+        }
+
+        function clearPhotos() {
+            focusPhoto = null;
+            photoItems.forEach(disposePhotoGroup);
+            photoItems = [];
+            particles = particles.filter((particle) => particle.type !== 'PHOTO');
+        }
+
+        async function loadPhotoSet(texturePromises) {
+            const loadVersion = ++photoLoadVersion;
+            clearPhotos();
+            const textures = await Promise.allSettled(texturePromises);
+            if (loadVersion !== photoLoadVersion) {
+                textures.forEach((result) => {
+                    if (result.status === 'fulfilled') {
+                        const url = result.value.userData?.objectUrl;
+                        if (url) URL.revokeObjectURL(url);
+                        result.value.dispose();
+                    }
+                });
+                return;
+            }
+            textures.forEach((result) => {
+                if (result.status === 'fulfilled') addPhoto(result.value);
+                else console.warn('Khong tai duoc anh:', result.reason);
+            });
+        }
+
+        function loadDefaultPhotos() {
+            if (userUploadedPhotos) return;
+            loadPhotoSet(DEFAULT_IMAGE_PATHS.map((src) => loadTexture(src)));
+        }
+
+        async function tryPlayMusic() {
+            if (!bgMusic || musicStarted || !musicUnlocked) return;
+            try {
+                await bgMusic.play();
+                musicStarted = true;
+            } catch (error) {
+                console.warn('Trinh duyet dang chan phat nhac:', error);
+            }
+        }
+
+        function setupMusic() {
+            bgMusic = document.getElementById('bg-music');
+            if (!bgMusic) return;
+            bgMusic.src = encodeURI(DEFAULT_MUSIC_PATH);
+            bgMusic.volume = 0.45;
+        }
+
+        async function upload(e) {
+            const files = e.target.files;
+            if (!files?.length) return;
+            userUploadedPhotos = true;
+            await loadPhotoSet([...files].map((file) => loadTextureFromFile(file)));
+            e.target.value = '';
+        }
+
+        async function media() {
+            video = document.getElementById('webcam');
+            camCanvas = document.getElementById('webcam-preview');
+            camCtx = camCanvas.getContext('2d');
+            sizeCam();
+            const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm');
+            landmarker = await HandLandmarker.createFromOptions(vision, { baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task', delegate: 'GPU' }, runningMode: 'VIDEO', numHands: 1 });
+            if (navigator.mediaDevices?.getUserMedia) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                    video.srcObject = stream;
+                    video.addEventListener('loadeddata', () => { sizeCam(); tickCam(); }, { once: true });
+                } catch (e) {
+                    camMsg('Camera access blocked');
+                    console.error(e);
+                }
+            } else camMsg('Camera unsupported');
+        }
+
+        function sizeCam() {
+            camCanvas.width = camCanvas.clientWidth || 240;
+            camCanvas.height = camCanvas.clientHeight || 180;
+        }
+
+        function camMsg(text) {
+            if (!camCtx) return;
+            camCtx.fillStyle = '#080404';
+            camCtx.fillRect(0, 0, camCanvas.width, camCanvas.height);
+            camCtx.fillStyle = 'rgba(255,229,178,.8)';
+            camCtx.font = '13px Manrope';
+            camCtx.textAlign = 'center';
+            camCtx.fillText(text, camCanvas.width / 2, camCanvas.height / 2);
+        }
+
+        function tickCam() {
+            if (video.readyState >= 2 && landmarker && video.currentTime !== lastVideo) {
+                lastVideo = video.currentTime;
+                const res = landmarker.detectForVideo(video, performance.now());
+                gestures(res);
+                drawCam(res);
+            } else if (video.readyState < 2) camMsg('Waiting for camera');
+            requestAnimationFrame(tickCam);
+        }
+
+        function gestures(res) {
+            if (res.landmarks?.length) {
+                const lm = res.landmarks[0], wrist = lm[0], tips = [lm[8], lm[12], lm[16], lm[20]];
+                const thumbTip = lm[4], indexTip = lm[8], middleTip = lm[12], middleBase = lm[9];
+                let openness = 0;
+                tips.forEach((t) => openness += Math.hypot(t.x - wrist.x, t.y - wrist.y));
+                openness /= tips.length;
+
+                const palmDirection = ((middleBase.x - wrist.x) * 3.2) + ((lm[5].x - lm[17].x) * 0.8);
+                const normalizedPalm = THREE.MathUtils.clamp(palmDirection, -1, 1);
+                const pinch = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
+                const middlePinch = Math.hypot(thumbTip.x - middleTip.x, thumbTip.y - middleTip.y);
+                const pinchOn = pinch < .055;
+                const cycleOn = pinchOn && middlePinch < .07;
+
+                S.hand.det = true;
+                S.hand.open += (openness - S.hand.open) * .18;
+                S.hand.x += (((lm[9].x - .5) * 2) - S.hand.x) * .18;
+                S.hand.y += (((lm[9].y - .5) * 2) - S.hand.y) * .18;
+                S.hand.palm += (normalizedPalm - S.hand.palm) * .08;
+                S.hand.pinch += ((pinchOn ? 1 : 0) - S.hand.pinch) * .14;
+                if (S.hand.open > .4) S.target = 1;
+                else if (S.hand.open < .27) S.target = 0;
+
+                if (cycleOn && !S.hand.changeLock && photoItems.length && S.open > .55) {
+                    focusPhoto = cycleFocusPhoto();
+                    S.hand.changeLock = 1;
+                } else if (!cycleOn) {
+                    S.hand.changeLock = 0;
+                }
+
+                if (S.hand.pinch > .55 && photoItems.length && S.open > .55) {
+                    focusPhoto = focusPhoto || chooseFocusPhoto();
+                    S.focus += (1 - S.focus) * .18;
+                } else {
+                    S.focus += (0 - S.focus) * .14;
+                    if (S.focus < .08) focusPhoto = null;
+                }
+            } else {
+                S.hand.det = false;
+                S.hand.open += (0 - S.hand.open) * .12;
+                S.hand.palm += (0 - S.hand.palm) * .08;
+                S.hand.pinch += (0 - S.hand.pinch) * .12;
+                S.hand.changeLock = 0;
+                S.focus += (0 - S.focus) * .12;
+                if (S.focus < .08) focusPhoto = null;
+            }
+        }
+
+        function drawCam(res) {
+            const w = camCanvas.width, h = camCanvas.height;
+            camCtx.clearRect(0, 0, w, h);
+            if (video.readyState >= 2) {
+                camCtx.save();
+                camCtx.translate(w, 0);
+                camCtx.scale(-1, 1);
+                camCtx.drawImage(video, 0, 0, w, h);
+                camCtx.restore();
+            } else {
+                camCtx.fillStyle = '#080404';
+                camCtx.fillRect(0, 0, w, h);
+            }
+            const grad = camCtx.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, 'rgba(18,3,6,.08)');
+            grad.addColorStop(1, 'rgba(18,3,6,.28)');
+            camCtx.fillStyle = grad;
+            camCtx.fillRect(0, 0, w, h);
+            if (!res.landmarks?.length) return;
+            const lm = res.landmarks[0];
+            camCtx.lineWidth = 2;
+            camCtx.strokeStyle = 'rgba(255,205,110,.95)';
+            camCtx.shadowColor = 'rgba(255,170,70,.55)';
+            camCtx.shadowBlur = 10;
+            BONES.forEach(([a, b]) => {
+                camCtx.beginPath();
+                camCtx.moveTo((1 - lm[a].x) * w, lm[a].y * h);
+                camCtx.lineTo((1 - lm[b].x) * w, lm[b].y * h);
+                camCtx.stroke();
+            });
+            lm.forEach((p, i) => {
+                camCtx.beginPath();
+                camCtx.fillStyle = i === 8 ? 'rgba(255,244,188,.98)' : 'rgba(255,188,88,.95)';
+                camCtx.arc((1 - p.x) * w, p.y * h, i === 0 ? 5 : i % 4 === 0 ? 4.5 : 3.2, 0, Math.PI * 2);
+                camCtx.fill();
+            });
+        }
+        function post() {
+            composer = new EffectComposer(renderer);
+            composer.addPass(new RenderPass(scene, camera));
+            bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.4, .5, .82);
+            bloomPass.threshold = .86;
+            bloomPass.strength = .34;
+            bloomPass.radius = .42;
+            composer.addPass(bloomPass);
+        }
+
+        function events() {
+            const unlockMusic = () => {
+                musicUnlocked = true;
+                if (S.open > .9) tryPlayMusic();
+            };
+            addEventListener('resize', () => {
+                camera.aspect = innerWidth / innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(innerWidth, innerHeight);
+                composer.setSize(innerWidth, innerHeight);
+                sizeCam();
+            });
+            document.getElementById('file-input').addEventListener('change', upload);
+            addEventListener('pointerdown', unlockMusic, { passive: true });
+            addEventListener('keydown', (e) => {
+                unlockMusic();
+                if (e.key.toLowerCase() === 'h') {
+                    document.querySelector('.upload-wrapper')?.classList.toggle('ui-hidden');
+                }
+            });
+        }
+
+        function updateGift(dt) {
+            const closing = S.target === 0;
+            S.open += (S.target - S.open) * Math.min(1, dt * (closing ? 2.25 : 3.8));
+            const closePhase = THREE.MathUtils.smoothstep(1 - S.open, .08, .98);
+            const sealPhase = THREE.MathUtils.smoothstep(closePhase, .93, .995);
+            const latchPhase = THREE.MathUtils.smoothstep(closePhase, .985, .999);
+            const latchTarget = closing ? 1 - latchPhase : S.open;
+            S.ribbon += (latchTarget - S.ribbon) * Math.min(1, dt * (closing ? 3.4 : 4.6));
+            S.lid += (latchTarget - S.lid) * Math.min(1, dt * (closing ? 3.1 : 2.8));
+            S.burst += (S.open - S.burst) * Math.min(1, dt * (closing ? 2.15 : 2.6));
+
+            if (S.open > .9) {
+                S.hasOpenedOnce = true;
+                S.disintegrateArmed = true;
+                tryPlayMusic();
+            }
+
+            if (S.target === 1 && S.open > .96) S.celebrate = Math.min(12, S.celebrate + dt);
+            else S.celebrate = Math.max(0, S.celebrate - dt * 3.6);
+
+            S.act1Mix = THREE.MathUtils.smoothstep(S.celebrate, 0.0, 1.0);
+            S.act2Mix = THREE.MathUtils.smoothstep(S.celebrate, 1.1, 2.0);
+            S.act3Mix = THREE.MathUtils.smoothstep(S.celebrate, 3.7, 4.8);
+            S.happyMix = THREE.MathUtils.smoothstep(S.celebrate, 1.2, 1.9) * (1 - THREE.MathUtils.smoothstep(S.celebrate, 4.35, 4.8));
+            S.nameMix = THREE.MathUtils.smoothstep(S.celebrate, 4.1, 4.9) * (1 - THREE.MathUtils.smoothstep(S.celebrate, 7.0, 7.5));
+            S.romanceMix = THREE.MathUtils.smoothstep(S.celebrate, 4.4, 5.4);
+            if (!closing || !S.hasOpenedOnce) {
+                S.closeLoveTimer = 0;
+            } else if (S.lid < 0.08 && S.ribbon < 0.08) {
+                S.closeLoveTimer = Math.min(12, S.closeLoveTimer + dt);
+            }
+            S.closeLoveMix = closing && S.hasOpenedOnce
+                ? THREE.MathUtils.smoothstep(S.closeLoveTimer, 0.0, 0.4)
+                : 0;
+            S.textMix = Math.max(S.happyMix, S.nameMix);
+            S.floatMix = THREE.MathUtils.smoothstep(S.celebrate, 5.4, 6.15);
+            S.boxHide = closing
+                ? 0
+                : THREE.MathUtils.smoothstep(S.celebrate, 1.15, 1.95);
+
+            const fullyClosed = closing && S.open < .035 && S.lid < .035 && S.ribbon < .035;
+            if (!S.disintegrateStarted && !S.disintegrated) {
+                if (fullyClosed && S.disintegrateArmed && S.hasOpenedOnce) {
+                    S.disintegrateStarted = true;
+                    S.disintegrateArmed = false;
+                    S.disintegrateTimer = 0;
+                    clearGiftFragments();
+                }
+            }
+
+            if (S.disintegrateStarted) {
+                S.disintegrateTimer = Math.min(.58, S.disintegrateTimer + dt);
+                S.disintegrateMix = THREE.MathUtils.smoothstep(S.disintegrateTimer / .58, 0, 1);
+                if (S.disintegrateTimer >= .58) {
+                    S.disintegrated = true;
+                }
+            } else if (!S.disintegrated) {
+                S.disintegrateMix = 0;
+            }
+
+            const ribbon = THREE.MathUtils.smoothstep(S.ribbon, .04, .85) * (1 - S.boxHide);
+            const stageHold = 1 - THREE.MathUtils.smoothstep(S.celebrate, .78, 1.25) * .18;
+            const lidOpen = THREE.MathUtils.smoothstep(S.lid, .08, .96) * stageHold * (1 - S.boxHide * .2);
+            const burst = THREE.MathUtils.smoothstep(S.burst, .18, .98);
+            const flutter = Math.sin(clock.elapsedTime * 4.2) * .08 * burst;
+            const boxOpacity = S.disintegrated ? 0 : (1 - S.boxHide);
+            const collapseMix = S.disintegrated ? 1 : S.disintegrateMix;
+            const collapsePull = THREE.MathUtils.smoothstep(collapseMix, 0, .94);
+            const collapseScale = Math.max(.001, 1 - collapsePull * .985);
+            const collapseCenter = new THREE.Vector3(0, CFG.box.h * .08, 0);
+            const romanceGlow = Math.max(S.romanceMix, S.closeLoveMix * .85);
+
+            rv.position.x = ribbon * 3.4;
+            rv.position.y = .7 + ribbon * .25;
+            rh.position.z = -ribbon * 3.4;
+            rh.position.y = .7 + ribbon * .12;
+            rv.scale.set(1 - ribbon * .55, 1 + ribbon * .04, 1);
+            rh.scale.set(1 + ribbon * .04, 1, 1 - ribbon * .55);
+
+            bow.position.y = CFG.box.h / 2 + CFG.box.lid + .8 + ribbon * 1.35 + S.boxHide * 2.2;
+            bow.position.z = ribbon * .55;
+            bow.rotation.y = ribbon * .55;
+            bow.rotation.x = -ribbon * .18;
+            bow.scale.setScalar((1 - ribbon * .15) * (1 - S.boxHide * .75));
+
+            bowLeft.position.set(-1.02 - ribbon * 1.25, .06 + ribbon * .38, .14 + ribbon * .16);
+            bowRight.position.set(1.0 + ribbon * 1.22, .1 + ribbon * .34, .1 + ribbon * .14);
+            bowLeft.rotation.set(.16 + ribbon * .22, .26 + ribbon * .28, -.22 - ribbon * .22 + flutter * .7);
+            bowRight.rotation.set(.15 + ribbon * .2, -.23 - ribbon * .26, .2 + ribbon * .22 - flutter * .7);
+            tailLeft.position.set(-.42 - ribbon * .58, -1.34 - ribbon * .3, .1 + ribbon * .16);
+            tailRight.position.set(.38 + ribbon * .54, -1.28 - ribbon * .28, .06 + ribbon * .16);
+            tailLeft.rotation.set(.04 + ribbon * .08, .08 + ribbon * .06, .16 + ribbon * .34 + flutter * .55);
+            tailRight.rotation.set(-.03 - ribbon * .08, -.06 - ribbon * .05, -.12 - ribbon * .32 - flutter * .55);
+
+            lidPivot.rotation.x = -lidOpen * 1.28 + Math.sin(clock.elapsedTime * 5.5) * .03 * burst;
+            lid.position.y = CFG.box.lid / 2 + lidOpen * .26;
+            lid.position.z = CFG.box.d / 2 + lidOpen * .2;
+
+            if (collapsePull > 0) {
+                const swirl = collapsePull * collapsePull;
+                giftShell.position.lerp(collapseCenter, collapsePull * .96);
+                giftShell.scale.setScalar(collapseScale);
+                giftShell.rotation.y = swirl * 4.2;
+                giftShell.rotation.z = swirl * 1.45;
+            } else {
+                giftShell.position.set(0, 0, 0);
+                giftShell.scale.setScalar(1);
+                giftShell.rotation.set(0, 0, 0);
+            }
+
+            glow.intensity = .3 + S.act1Mix * 1.6 + burst * 4.7 + S.happyMix * 2.1 + S.nameMix * 5.1 + romanceGlow * 2.5;
+            glow.distance = 24 + S.act1Mix * 8 + burst * 18 + S.happyMix * 12 + S.nameMix * 26 + romanceGlow * 18;
+            glow.position.y = 2.1 + S.act1Mix * 1.2 + burst * 1.8 + S.happyMix * 2.2 + S.nameMix * 3.6;
+
+            for (const mesh of [base, lid, rv, rh]) {
+                mesh.material.transparent = true;
+                mesh.material.opacity = boxOpacity;
+                mesh.visible = boxOpacity > .03;
+            }
+            bow.traverse((child) => {
+                if (child.material) {
+                    child.material.transparent = true;
+                    child.material.opacity = boxOpacity;
+                    child.visible = boxOpacity > .03;
+                }
+            });
+
+            base.material.emissiveIntensity = (.24 + S.act1Mix * .18 + burst * .28) * boxOpacity;
+            lid.material.emissiveIntensity = (.24 + S.act1Mix * .22 + burst * .24) * boxOpacity;
+            rv.material.emissiveIntensity = (.46 + S.act1Mix * .3 + burst * .34) * boxOpacity;
+            rh.material.emissiveIntensity = (.46 + S.act1Mix * .3 + burst * .34) * boxOpacity;
+
+            sparkles.children.forEach((s) => {
+                const d = s.userData;
+                const t = clock.elapsedTime * d.v;
+                const ambientMix = Math.max(S.burst * 0.82, S.floatMix, S.act1Mix * .55);
+                if (!S.hasOpenedOnce && S.open < .08) {
+                    const idleBlink = 0.74 + 0.26 * Math.max(0, Math.sin(clock.elapsedTime * d.blink + d.blinkPhase));
+                    s.position.set(
+                        bow.position.x + Math.cos(t * 1.35 + d.a) * (1.8 + d.closeR * 0.75),
+                        bow.position.y + 0.55 + d.closeY * 0.22 + Math.sin(t * 1.6 + d.a) * 0.12,
+                        bow.position.z + Math.sin(t * 1.35 + d.a) * (0.9 + d.closeR * 0.32)
+                    );
+                    s.scale.setScalar((0.12 + d.sizePulse * 0.3) * idleBlink);
+                    s.material.opacity = 0.32 * idleBlink;
+                } else if ((closing && closePhase > .08) || S.closeLoveMix > .08) {
+                    const orbitAroundBow = 1 - THREE.MathUtils.smoothstep(closePhase, .88, .995);
+                    const ringMix = Math.max(orbitAroundBow, S.closeLoveMix * 0.92);
+                    const shimmer = 0.84 + Math.max(0, Math.sin(clock.elapsedTime * d.blink + d.blinkPhase)) * (0.18 + d.twinkleAmp * 0.34);
+                    const flicker = 0.94 + Math.max(0, Math.sin(clock.elapsedTime * d.flicker + d.flickerPhase)) * 0.08;
+                    const flash = d.flashChance ? Math.max(0, Math.sin(clock.elapsedTime * d.flashSpeed + d.flashPhase)) ** 10 * 0.16 : 0;
+                    const blink = (d.twinkleBase * d.glowBias) + (shimmer - 0.84) + (flicker - 0.94) + flash;
+                    const loveLift = S.closeLoveMix > .08 ? (1.6 + S.closeLoveMix * 1.1) : 0;
+                    s.position.set(
+                        bow.position.x + Math.cos(t * 1.9 + d.a) * d.closeR * ringMix,
+                        bow.position.y + loveLift + d.closeY * ringMix + Math.sin(t * 2.2 + d.a) * 0.18 * ringMix,
+                        bow.position.z + Math.sin(t * 1.9 + d.a) * d.closeR * 0.58 * ringMix
+                    );
+                    const sc = (0.18 + ringMix * (0.34 + d.sizePulse * 0.55)) * blink;
+                    s.scale.setScalar(sc);
+                    s.material.opacity = ringMix * (0.64 + blink * 0.26 + flash * 0.4);
+                } else {
+                    s.position.set(
+                        Math.cos(t + d.a) * d.r * (.3 + ambientMix),
+                        7 + S.textMix * 4 + romanceGlow * 1.1 + ambientMix * d.h + Math.sin(t * 1.4) * .5,
+                        Math.sin(t + d.a) * d.r * .45 * (.3 + ambientMix)
+                    );
+                    const shimmer = 0.84 + Math.max(0, Math.sin(clock.elapsedTime * d.blink + d.blinkPhase)) * (0.18 + d.twinkleAmp * 0.34);
+                    const flicker = 0.94 + Math.max(0, Math.sin(clock.elapsedTime * d.flicker + d.flickerPhase)) * 0.08;
+                    const flash = d.flashChance ? Math.max(0, Math.sin(clock.elapsedTime * d.flashSpeed + d.flashPhase)) ** 10 * 0.18 : 0;
+                    const blink = (d.twinkleBase * d.glowBias) + (shimmer - 0.84) + (flicker - 0.94) + flash;
+                    const sc = ((S.act1Mix * .45) + (S.happyMix * 1.05) + (S.nameMix * 1.9) + S.floatMix + romanceGlow * .35) * (.38 + d.sizePulse * 0.72 + 0.34 * Math.sin(t + d.a + d.shimmerPhase) ** 2) * blink;
+                    s.scale.setScalar(sc);
+                    s.material.opacity = Math.max(0.18, S.act1Mix * .35, S.happyMix * 0.98, S.nameMix * 1.0, S.floatMix * .9, romanceGlow * .72) * (0.72 + blink * 0.28 + flash * 0.35);
+                }
+            });
+
+            photoItems.forEach((group, index) => {
+                const pulse = .92 + S.textMix * .45 + S.floatMix * .28 + Math.sin(clock.elapsedTime * 2.2 + index) * .03 * Math.max(S.textMix, S.floatMix);
+                if (group !== focusPhoto || S.focus < .02) {
+                    group.scale.lerp(new THREE.Vector3(pulse, pulse, pulse), dt * 4);
+                }
+                group.position.x = THREE.MathUtils.lerp(group.position.x, group.position.x * (1 - S.textMix * .03), dt * 3.2);
+                group.position.y += Math.sin(clock.elapsedTime * 1.1 + index) * .003 * Math.max(S.textMix, S.floatMix);
+                if (group.children[1]?.material) group.children[1].material.emissiveIntensity = group.userData.baseFrameEmissive || 0;
+            });
+
+            updateSky(dt);
+            if (bloomPass) {
+                bloomPass.strength = 0.26 + S.act1Mix * 0.1 + S.happyMix * 0.1 + S.nameMix * 0.18 + romanceGlow * 0.14;
+                bloomPass.radius = 0.38 + romanceGlow * 0.1;
+            }
+        }
+
+        function updateSky(dt) {
+            if (!skyGroup) return;
+            const romanceGlow = Math.max(S.romanceMix, S.closeLoveMix * .8);
+            skyGroup.children.forEach((child, index) => {
+                const data = child.userData;
+                const time = clock.elapsedTime * (data.speed || data.drift || 0.2) + data.off;
+                if (data.type === 'veil') {
+                    child.position.x += Math.sin(time * .25 + index) * data.drift * dt;
+                    child.position.y += Math.cos(time * .2 + index) * data.drift * dt * .4;
+                    child.rotation.z += dt * 0.01;
+                    child.material.opacity = data.baseOpacity + S.act1Mix * 0.01 + romanceGlow * 0.04 + Math.max(0, Math.sin(time * .7)) * 0.02;
+                } else {
+                    child.position.y += Math.sin(time * .5 + index) * data.drift * dt * .12;
+                    const shimmer = 0.84 + Math.max(0, Math.sin(clock.elapsedTime * data.shimmerSpeed + data.shimmerPhase)) * 0.18;
+                    const flicker = 0.95 + Math.max(0, Math.sin(clock.elapsedTime * data.flickerSpeed + data.flickerPhase)) * 0.08;
+                    const flash = data.flashChance ? Math.max(0, Math.sin(clock.elapsedTime * data.flashSpeed + data.flashPhase)) ** 12 * 0.22 : 0;
+                    child.material.opacity = THREE.MathUtils.clamp(data.baseOpacity * data.glowBias + (shimmer - 0.84) + (flicker - 0.95) + flash + S.act1Mix * 0.04 + romanceGlow * 0.08, 0.08, .96);
+                    const twinkle = data.baseScale * (0.84 + (shimmer - 0.84) * 0.85 + (flicker - 0.95) * 0.5 + flash * 0.35);
+                    child.scale.setScalar(twinkle);
+                }
+            });
+        }
+
+        function updateCamera(dt) {
+            const introMix = THREE.MathUtils.smoothstep(S.act1Mix, 0.0, 1.0);
+            const textMix = THREE.MathUtils.smoothstep(S.act2Mix, 0.0, 1.0);
+            const finaleMix = THREE.MathUtils.smoothstep(S.act3Mix, 0.0, 1.0);
+            const resolveMix = THREE.MathUtils.smoothstep(S.floatMix, 0.08, 0.58);
+
+            const targetPos = CAM.introPos.clone()
+                .lerp(CAM.textPos, textMix)
+                .lerp(CAM.finalePos, finaleMix)
+                .lerp(CAM.resolvePos, resolveMix);
+            const targetLook = CAM.introLook.clone()
+                .lerp(CAM.textLook, textMix)
+                .lerp(CAM.finaleLook, finaleMix)
+                .lerp(CAM.resolveLook, resolveMix);
+
+            const sway = Math.sin(clock.elapsedTime * 0.55) * 0.28 * (0.35 + introMix * 0.35);
+            const lift = Math.cos(clock.elapsedTime * 0.42) * 0.18 * (0.2 + finaleMix * 0.45);
+            targetPos.x += sway;
+            targetPos.y += lift;
+
+            if (S.focus > .02 && focusPhoto) {
+                targetPos.lerp(CAM.finalePos.clone().add(CAM.focusOffset), S.focus * 0.82);
+                targetLook.lerp(new THREE.Vector3(0, 0.25, -12.5), S.focus * 0.9);
+            }
+
+            camera.position.lerp(targetPos, dt * 2.8);
+            camLook.lerp(targetLook, dt * 3.2);
+            camera.lookAt(camLook);
+
+            const targetFov = THREE.MathUtils.lerp(43, 39, textMix * 0.9 + finaleMix * 0.08) - finaleMix * 3.1 + resolveMix * 3.8 - S.focus * 2.8;
+            camera.fov += (targetFov - camera.fov) * dt * 3;
+            camera.updateProjectionMatrix();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), .033);
+            const t = clock.elapsedTime;
+            if (S.closeLoveMix > .08) {
+                S.rot.y += (0 - S.rot.y) * 8.4 * dt;
+                S.rot.x += (0 - S.rot.x) * 5.6 * dt;
+            } else if (S.textMix > .04) {
+                S.rot.y += (0 - S.rot.y) * 7.4 * dt;
+                S.rot.x += (-0.02 - S.rot.x) * 3.6 * dt;
+            } else {
+                S.rot.y += CFG.autoRotateSpeed * dt;
+                S.rot.x += (-0.02 - S.rot.x) * 2.2 * dt;
+            }
+            main.rotation.y = S.rot.y;
+            main.rotation.x = S.rot.x;
+            main.position.y = -1 + Math.sin(t * .6) * .15;
+            updateGift(dt);
+            updateCamera(dt);
+            particles.forEach((p) => p.update(dt, S.burst, S.happyMix, S.nameMix, S.textMix, S.floatMix));
+            composer.render();
+        }
+
+        init();
+    </script>
+</body>
+</html>
