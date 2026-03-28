@@ -1795,7 +1795,12 @@
             requestAnimationFrame(animate);
             const dt = Math.min(clock.getDelta(), .033);
             const t = clock.elapsedTime;
-            if (S.closeLoveMix > .08) {
+            const transitioningOpen = S.target === 1 && S.open < .94;
+            const transitioningClose = S.target === 0 && S.open > .06;
+            if ((transitioningOpen || transitioningClose) && S.closeLoveMix <= .08) {
+                S.rot.y += (0 - S.rot.y) * 14 * dt;
+                S.rot.x += (-0.02 - S.rot.x) * 6.2 * dt;
+            } else if (S.closeLoveMix > .08) {
                 S.rot.y += (0 - S.rot.y) * 8.4 * dt;
                 S.rot.x += (0 - S.rot.x) * 5.6 * dt;
             } else if (S.textMix > .04) {
